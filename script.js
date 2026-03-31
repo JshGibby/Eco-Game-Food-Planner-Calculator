@@ -1,9 +1,6 @@
 import { getFilteredFoods, toggleFood, isEnabled, getAllFoods, setEnabledFoods } from './filters.js';
 import { generateOptimalPlans, generateRandomPlanOnly } from './planGenerator.js';
-import { drawPie, displayPlan, renderPlanList } from './ui.js';
-
-let currentOptimalPlans = [];
-let selectedPlanIndex = -1;
+import { drawPie, displayPlan } from './ui.js';
 
 function getCurrentNutrients() {
     return {
@@ -33,7 +30,7 @@ function getIgnoreLimit() {
     return document.getElementById('ignoreCalorieLimit').checked;
 }
 
-async function generateAndShowPlans() {
+async function generateAndShowOptimalPlan() {
     const current = getCurrentNutrients();
     const curCal = getCurrentCalories();
     const maxCal = getMaxCalories();
@@ -46,8 +43,9 @@ async function generateAndShowPlans() {
     
     setTimeout(() => {
         try {
-            const plans = generateOptimalPlans(current, curCal, maxCal, ignoreLimit, 20, 10000);
+            const plans = generateOptimalPlans(current, curCal, maxCal, ignoreLimit, 1, 10000);
             if (plans.length === 0) {
+                // No plans means current state is already optimal
                 const emptyPlan = {
                     meals: [],
                     final: { ...current },
@@ -56,8 +54,6 @@ async function generateAndShowPlans() {
                            Math.min(current.carbs, current.protein, current.fat, current.vitamins)
                 };
                 displayPlan(emptyPlan, current);
-                const section = document.getElementById('optimalPlansSection');
-                if (section) section.style.display = 'none';
                 const mealListDiv = document.getElementById('mealList');
                 if (mealListDiv) {
                     mealListDiv.innerHTML = '✨ Your current nutrient balance is already perfect and calories are maxed out! No additional food needed.';
@@ -66,17 +62,10 @@ async function generateAndShowPlans() {
                 calcBtn.disabled = false;
                 return;
             }
-            currentOptimalPlans = plans;
-            selectedPlanIndex = 0;
-            renderPlanList(plans, (idx) => {
-                selectedPlanIndex = idx;
-                displayPlan(plans[idx], current);
-                renderPlanList(plans, (i) => { selectedPlanIndex = i; displayPlan(plans[i], current); renderPlanList(plans, (i2) => {}, selectedPlanIndex); }, selectedPlanIndex);
-            }, selectedPlanIndex);
             displayPlan(plans[0], current);
         } catch (err) {
             console.error(err);
-            alert('An error occurred while generating plans.');
+            alert('An error occurred while generating the optimal plan.');
         } finally {
             calcBtn.textContent = originalText;
             calcBtn.disabled = false;
@@ -92,8 +81,6 @@ function generateRandomPlan() {
     const plan = generateRandomPlanOnly(current, curCal, maxCal, ignoreLimit);
     if (plan) {
         displayPlan(plan, current);
-        const section = document.getElementById('optimalPlansSection');
-        if (section) section.style.display = 'none';
         if (plan.meals.length === 0) {
             const mealListDiv = document.getElementById('mealList');
             if (mealListDiv) {
@@ -116,7 +103,6 @@ function buildFoodUI() {
         const div = document.createElement('div');
         div.className = 'food-item';
         
-        // Checkbox
         const cb = document.createElement('input');
         cb.type = 'checkbox';
         cb.checked = isEnabled(food.name);
@@ -124,18 +110,12 @@ function buildFoodUI() {
             toggleFood(food.name, e.target.checked);
             const toggleAll = document.getElementById('toggleAllFoods');
             if (toggleAll) toggleAll.checked = getAllFoods().every(f => isEnabled(f.name));
-            currentOptimalPlans = [];
-            selectedPlanIndex = -1;
-            const section = document.getElementById('optimalPlansSection');
-            if (section) section.style.display = 'none';
         };
         
-        // Stats badge (left side)
         const statsSpan = document.createElement('span');
         statsSpan.className = 'food-stats';
         statsSpan.textContent = `C${food.carbs} P${food.protein} F${food.fat} V${food.vitamins} | ${food.cal}cal`;
         
-        // Food name (right side)
         const nameSpan = document.createElement('span');
         nameSpan.className = 'food-name';
         nameSpan.textContent = food.name;
@@ -166,13 +146,9 @@ function initEventListeners() {
         allFoods.forEach(f => { if (enabled) newSet.add(f.name); });
         setEnabledFoods(newSet);
         buildFoodUI();
-        currentOptimalPlans = [];
-        selectedPlanIndex = -1;
-        const section = document.getElementById('optimalPlansSection');
-        if (section) section.style.display = 'none';
     };
     document.getElementById('foodSearch').oninput = () => buildFoodUI();
-    document.getElementById('calculateBtn').onclick = generateAndShowPlans;
+    document.getElementById('calculateBtn').onclick = generateAndShowOptimalPlan;
     document.getElementById('randomizeBtn').onclick = generateRandomPlan;
     
     const inputs = ['carbs', 'protein', 'fat', 'vitamins', 'curCalories', 'maxCalories', 'ignoreCalorieLimit', 'tier', 'disableTierFilter', 'biomeFilter', 'disableBiomeFilter'];
