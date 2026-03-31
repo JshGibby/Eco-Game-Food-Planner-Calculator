@@ -5,7 +5,6 @@ export function drawPie(canvasId, c, p, f, v) {
     if (!ctx) return;
     const w = canvas.width, h = canvas.height;
     ctx.clearRect(0, 0, w, h);
-    // Ensure values are numbers and not NaN
     c = isNaN(c) ? 0 : c;
     p = isNaN(p) ? 0 : p;
     f = isNaN(f) ? 0 : f;
@@ -35,7 +34,6 @@ export function drawPie(canvasId, c, p, f, v) {
 
 export function displayPlan(plan, currentNutrients) {
     if (!plan) return;
-    // Ensure current nutrients are numbers
     const cur = {
         carbs: isNaN(currentNutrients.carbs) ? 0 : currentNutrients.carbs,
         protein: isNaN(currentNutrients.protein) ? 0 : currentNutrients.protein,
@@ -79,7 +77,6 @@ export function displayPlan(plan, currentNutrients) {
                 const proteinAdded = (item.food.protein || 0) * item.servings;
                 const fatAdded = (item.food.fat || 0) * item.servings;
                 const vitaminsAdded = (item.food.vitamins || 0) * item.servings;
-                // Prevent NaN display
                 html += `<li><b>${item.servings}x ${item.food.name}</b> — +${isNaN(carbsAdded) ? 0 : carbsAdded}C / ${isNaN(proteinAdded) ? 0 : proteinAdded}P / ${isNaN(fatAdded) ? 0 : fatAdded}F / ${isNaN(vitaminsAdded) ? 0 : vitaminsAdded}V (${isNaN(item.totalCal) ? 0 : item.totalCal} cal)</li>`;
             }
             html += '</ul>';
@@ -102,38 +99,4 @@ export function displayPlan(plan, currentNutrients) {
     if (balanceDiv) {
         balanceDiv.innerHTML = diff <= 8 ? `<span class="perfect-badge">🌟 Nutrients balanced within ${diff.toFixed(1)} points! 25% target achieved.</span>` : `<span>⚖️ Balance difference: ${diff.toFixed(1)} points (closer to equal = perfect quarter)</span>`;
     }
-}
-
-export function renderPlanList(plans, onSelect, selectedIndex = -1) {
-    const container = document.getElementById('optimalPlansContainer');
-    const section = document.getElementById('optimalPlansSection');
-    if (!container || !section) return;
-    if (!plans || plans.length === 0) {
-        section.style.display = 'none';
-        return;
-    }
-    section.style.display = 'block';
-    container.innerHTML = '';
-    plans.forEach((plan, idx) => {
-        const diffVal = Math.max(plan.final.carbs, plan.final.protein, plan.final.fat, plan.final.vitamins) -
-                        Math.min(plan.final.carbs, plan.final.protein, plan.final.fat, plan.final.vitamins);
-        const card = document.createElement('div');
-        card.className = `plan-card ${idx === selectedIndex ? 'active' : ''}`;
-        card.innerHTML = `
-            <div style="flex:3"><strong>Plan ${idx+1}</strong><br>
-            <span class="plan-stats">🥗 C:${plan.final.carbs.toFixed(0)} P:${plan.final.protein.toFixed(0)} F:${plan.final.fat.toFixed(0)} V:${plan.final.vitamins.toFixed(0)} &nbsp;| 🔥 ${plan.caloriesUsed.toFixed(0)} cal</span>
-            </div>
-            <div><span class="badge-diff">⚖️ diff ${diffVal.toFixed(1)}</span></div>
-            <button class="show-plan-btn" data-idx="${idx}" style="background:#2b5e55; padding:6px 16px;">Preview</button>
-        `;
-        container.appendChild(card);
-    });
-    document.querySelectorAll('.show-plan-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            const idx = parseInt(btn.getAttribute('data-idx'), 10);
-            if (!isNaN(idx) && plans[idx]) {
-                onSelect(idx);
-            }
-        });
-    });
 }
