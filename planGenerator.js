@@ -1,13 +1,21 @@
 import { getFilteredFoods } from './filters.js';
 
 function computePlanTotals(plan, currentNutrients) {
-    const totals = { carbs: currentNutrients.carbs, protein: currentNutrients.protein, fat: currentNutrients.fat, vitamins: currentNutrients.vitamins, calories: 0 };
+    const totals = { 
+        carbs: currentNutrients.carbs, 
+        protein: currentNutrients.protein, 
+        fat: currentNutrients.fat, 
+        vitamins: currentNutrients.vitamins, 
+        calories: 0 
+    };
     for (const item of plan) {
-        totals.carbs += item.food.carbs * item.servings;
-        totals.protein += item.food.protein * item.servings;
-        totals.fat += item.food.fat * item.servings;
-        totals.vitamins += item.food.vitamins * item.servings;
-        totals.calories += item.food.cal * item.servings;
+        if (!item || !item.food) continue;
+        const s = item.servings || 0;
+        totals.carbs += (item.food.carbs || 0) * s;
+        totals.protein += (item.food.protein || 0) * s;
+        totals.fat += (item.food.fat || 0) * s;
+        totals.vitamins += (item.food.vitamins || 0) * s;
+        totals.calories += (item.food.cal || 0) * s;
     }
     return totals;
 }
@@ -17,7 +25,6 @@ function generateRandomPlan(availableFoods, maxCalories, ignoreLimit, maxDistinc
     let remainingCal = ignoreLimit ? 1e9 : maxCalories;
     const usedFoods = new Set();
     
-    // Shuffle available foods for randomness
     const shuffled = [...availableFoods];
     for (let i = shuffled.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
@@ -26,12 +33,11 @@ function generateRandomPlan(availableFoods, maxCalories, ignoreLimit, maxDistinc
     
     for (const food of shuffled) {
         if (usedFoods.size >= maxDistinct) break;
+        // Skip foods with non‑positive calories if limit is not ignored
+        if (!ignoreLimit && food.cal <= 0) continue;
         if (food.cal > remainingCal && !ignoreLimit) continue;
-        
-        // Determine servings: random between 1 and max allowed
         const maxS = ignoreLimit ? maxServingsPerFood : Math.min(maxServingsPerFood, Math.floor(remainingCal / food.cal));
         if (maxS < 1) continue;
-        
         const servings = Math.floor(Math.random() * maxS) + 1;
         plan.push({ food, servings });
         remainingCal -= food.cal * servings;
@@ -58,6 +64,8 @@ export function generateOptimalPlans(currentNutrients, maxCalories, ignoreLimit,
         const plan = generateRandomPlan(available, maxCalories, ignoreLimit);
         if (plan.length === 0) continue;
         const { totals, diff, caloriesUsed } = evaluatePlan(plan, currentNutrients);
+        // Ensure no NaN in final totals (just in case)
+        if (isNaN(totals.carbs) || isNaN(totals.protein) || isNaN(totals.fat) || isNaN(totals.vitamins)) continue;
         candidatePlans.push({
             meals: plan,
             final: { carbs: totals.carbs, protein: totals.protein, fat: totals.fat, vitamins: totals.vitamins },
@@ -66,7 +74,6 @@ export function generateOptimalPlans(currentNutrients, maxCalories, ignoreLimit,
         });
     }
     
-    // Remove duplicates based on meal composition (simple string key)
     const unique = new Map();
     for (const plan of candidatePlans) {
         const key = plan.meals.map(m => `${m.food.name}x${m.servings}`).sort().join('|');
@@ -75,7 +82,6 @@ export function generateOptimalPlans(currentNutrients, maxCalories, ignoreLimit,
         }
     }
     
-    // Convert to array and sort by diff (ascending), then by caloriesUsed (descending)
     const sorted = Array.from(unique.values()).sort((a, b) => {
         if (Math.abs(a.diff - b.diff) < 0.1) return b.caloriesUsed - a.caloriesUsed;
         return a.diff - b.diff;
