@@ -1,102 +1,180 @@
-export function drawPie(canvasId, c, p, f, v) {
-    const canvas = document.getElementById(canvasId);
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    const w = canvas.width, h = canvas.height;
-    ctx.clearRect(0, 0, w, h);
-    c = isNaN(c) ? 0 : c;
-    p = isNaN(p) ? 0 : p;
-    f = isNaN(f) ? 0 : f;
-    v = isNaN(v) ? 0 : v;
-    const total = c + p + f + v;
-    if (total <= 0) return;
-    const vals = [c, p, f, v];
-    const colors = ["#e63946", "#f4a261", "#ffcd5d", "#2a9d8f"];
-    let start = -Math.PI / 2;
-    const cx = w/2, cy = h/2, r = Math.min(w, h) * 0.38;
-    for (let i = 0; i < 4; i++) {
-        if (vals[i] <= 0) continue;
-        const angle = (vals[i] / total) * Math.PI * 2;
-        const end = start + angle;
-        ctx.beginPath();
-        ctx.moveTo(cx, cy);
-        ctx.arc(cx, cy, r, start, end);
-        ctx.fillStyle = colors[i];
-        ctx.fill();
-        start = end;
-    }
-    ctx.fillStyle = "#ffffffcc";
-    ctx.beginPath();
-    ctx.arc(cx, cy, r * 0.55, 0, 2 * Math.PI);
-    ctx.fill();
-}
+import { getFilteredFoods, toggleFood, isEnabled, getAllFoods, setEnabledFoods } from './filters.js';
+import { generateOptimalPlans, generateRandomPlanOnly } from './planGenerator.js';
+import { drawPie, displayPlan } from './ui.js';
 
-export function displayPlan(plan, currentNutrients) {
-    if (!plan) return;
-    const cur = {
-        carbs: isNaN(currentNutrients.carbs) ? 0 : currentNutrients.carbs,
-        protein: isNaN(currentNutrients.protein) ? 0 : currentNutrients.protein,
-        fat: isNaN(currentNutrients.fat) ? 0 : currentNutrients.fat,
-        vitamins: isNaN(currentNutrients.vitamins) ? 0 : currentNutrients.vitamins
+function getCurrentNutrients() {
+    return {
+        carbs: parseFloat(document.getElementById('carbs').value) || 0,
+        protein: parseFloat(document.getElementById('protein').value) || 0,
+        fat: parseFloat(document.getElementById('fat').value) || 0,
+        vitamins: parseFloat(document.getElementById('vitamins').value) || 0
     };
-    drawPie('beforeChart', cur.carbs, cur.protein, cur.fat, cur.vitamins);
-    drawPie('afterChart', plan.final.carbs, plan.final.protein, plan.final.fat, plan.final.vitamins);
+}
 
-    const diff = Math.max(plan.final.carbs, plan.final.protein, plan.final.fat, plan.final.vitamins) -
-                 Math.min(plan.final.carbs, plan.final.protein, plan.final.fat, plan.final.vitamins);
+function updateTotalPoints() {
+    const nutrients = getCurrentNutrients();
+    const total = nutrients.carbs + nutrients.protein + nutrients.fat + nutrients.vitamins;
+    const totalSpan = document.getElementById('totalPointsValue');
+    if (totalSpan) totalSpan.textContent = total;
+}
 
-    const statsDiv = document.getElementById('statsDisplay');
-    if (statsDiv) {
-        statsDiv.innerHTML = `<div><strong>Current total points:</strong> ${(cur.carbs + cur.protein + cur.fat + cur.vitamins).toFixed(1)}</div>
-        <div><strong>After plan totals:</strong> C=${plan.final.carbs.toFixed(1)} P=${plan.final.protein.toFixed(1)} F=${plan.final.fat.toFixed(1)} V=${plan.final.vitamins.toFixed(1)}</div>`;
-    }
+function getCurrentCalories() {
+    return parseFloat(document.getElementById('curCalories').value) || 0;
+}
 
-    const algebraDiv = document.getElementById('algebraBox');
-    if (algebraDiv) {
-        algebraDiv.innerHTML = `<strong>🎯 PERFECT QUARTER CHECK</strong><br>Diff (max-min) = ${diff.toFixed(2)} points → ${diff <= 5 ? '✅ BALANCED (25% each)' : '⚠️ Not yet balanced'}`;
-    }
+function getMaxCalories() {
+    return parseFloat(document.getElementById('maxCalories').value) || 3000;
+}
 
-    const mealDiv = document.getElementById('mealList');
-    if (mealDiv) {
-        if (!plan.meals || plan.meals.length === 0) {
-            mealDiv.innerHTML = '⚠️ No foods selected.';
-        } else {
-            const grouped = new Map();
-            for (const m of plan.meals) {
-                if (!m || !m.food) continue;
-                const key = m.food.name;
-                if (!grouped.has(key)) grouped.set(key, { servings: 0, food: m.food, totalCal: 0 });
-                const e = grouped.get(key);
-                e.servings += m.servings;
-                e.totalCal += (m.food.cal || 0) * m.servings;
+function getIgnoreLimit() {
+    return document.getElementById('ignoreCalorieLimit').checked;
+}
+
+async function generateAndShowOptimalPlan() {
+    const current = getCurrentNutrients();
+    const curCal = getCurrentCalories();
+    const maxCal = getMaxCalories();
+    const ignoreLimit = getIgnoreLimit();
+    
+    const calcBtn = document.getElementById('calculateBtn');
+    const originalText = calcBtn.textContent;
+    calcBtn.textContent = '⚡ Generating...';
+    calcBtn.disabled = true;
+    
+    setTimeout(() => {
+        try {
+            const plans = generateOptimalPlans(current, curCal, maxCal, ignoreLimit, 1, 10000);
+            if (plans.length === 0) {
+                // No plans means current state is already optimal
+                const emptyPlan = {
+                    meals: [],
+                    final: { ...current },
+                    caloriesUsed: 0,
+                    diff: Math.max(current.carbs, current.protein, current.fat, current.vitamins) -
+                           Math.min(current.carbs, current.protein, current.fat, current.vitamins)
+                };
+                displayPlan(emptyPlan, current);
+                const mealListDiv = document.getElementById('mealList');
+                if (mealListDiv) {
+                    mealListDiv.innerHTML = '✨ Your current nutrient balance is already perfect and calories are maxed out! No additional food needed.';
+                }
+                calcBtn.textContent = originalText;
+                calcBtn.disabled = false;
+                return;
             }
-            let html = '<ul style="margin:6px 0 0 20px;">';
-            for (const [_, item] of grouped) {
-                const carbsAdded = (item.food.carbs || 0) * item.servings;
-                const proteinAdded = (item.food.protein || 0) * item.servings;
-                const fatAdded = (item.food.fat || 0) * item.servings;
-                const vitaminsAdded = (item.food.vitamins || 0) * item.servings;
-                html += `<li><b>${item.servings}x ${item.food.name}</b> — +${isNaN(carbsAdded) ? 0 : carbsAdded}C / ${isNaN(proteinAdded) ? 0 : proteinAdded}P / ${isNaN(fatAdded) ? 0 : fatAdded}F / ${isNaN(vitaminsAdded) ? 0 : vitaminsAdded}V (${isNaN(item.totalCal) ? 0 : item.totalCal} cal)</li>`;
-            }
-            html += '</ul>';
-            mealDiv.innerHTML = html;
+            displayPlan(plans[0], current);
+        } catch (err) {
+            console.error(err);
+            alert('An error occurred while generating the optimal plan.');
+        } finally {
+            calcBtn.textContent = originalText;
+            calcBtn.disabled = false;
         }
-    }
+    }, 10);
+}
 
-    const calorieInfo = document.getElementById('calorieInfo');
-    if (calorieInfo) {
-        const calUsed = isNaN(plan.caloriesUsed) ? 0 : plan.caloriesUsed;
-        calorieInfo.innerHTML = `🔥 Calories added: ${calUsed.toFixed(0)}`;
-    }
-
-    const totalsDiv = document.getElementById('totalsDisplay');
-    if (totalsDiv) {
-        totalsDiv.innerHTML = `➕ Totals → Carbs: ${plan.final.carbs.toFixed(1)} | Protein: ${plan.final.protein.toFixed(1)} | Fat: ${plan.final.fat.toFixed(1)} | Vitamins: ${plan.final.vitamins.toFixed(1)} | Calories added: ${plan.caloriesUsed.toFixed(0)}`;
-    }
-
-    const balanceDiv = document.getElementById('balanceQuality');
-    if (balanceDiv) {
-        balanceDiv.innerHTML = diff <= 8 ? `<span class="perfect-badge">🌟 Nutrients balanced within ${diff.toFixed(1)} points! 25% target achieved.</span>` : `<span>⚖️ Balance difference: ${diff.toFixed(1)} points (closer to equal = perfect quarter)</span>`;
+function generateRandomPlan() {
+    const current = getCurrentNutrients();
+    const curCal = getCurrentCalories();
+    const maxCal = getMaxCalories();
+    const ignoreLimit = getIgnoreLimit();
+    const plan = generateRandomPlanOnly(current, curCal, maxCal, ignoreLimit);
+    if (plan) {
+        displayPlan(plan, current);
+        if (plan.meals.length === 0) {
+            const mealListDiv = document.getElementById('mealList');
+            if (mealListDiv) {
+                mealListDiv.innerHTML = '✨ Your current nutrient balance is already perfect and calories are maxed out! No additional food needed.';
+            }
+        }
+    } else {
+        alert('No foods available to generate a random plan.');
     }
 }
+
+function buildFoodUI() {
+    const container = document.getElementById('foodListContainer');
+    const searchInput = document.getElementById('foodSearch');
+    if (!container) return;
+    const searchTerm = searchInput ? searchInput.value.toLowerCase() : '';
+    const foods = getAllFoods().filter(f => f.name.toLowerCase().includes(searchTerm));
+    container.innerHTML = '';
+    for (const food of foods) {
+        const div = document.createElement('div');
+        div.className = 'food-item';
+        
+        const cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.checked = isEnabled(food.name);
+        cb.onchange = (e) => {
+            toggleFood(food.name, e.target.checked);
+            const toggleAll = document.getElementById('toggleAllFoods');
+            if (toggleAll) toggleAll.checked = getAllFoods().every(f => isEnabled(f.name));
+        };
+        
+        const statsSpan = document.createElement('span');
+        statsSpan.className = 'food-stats';
+        statsSpan.textContent = `C${food.carbs} P${food.protein} F${food.fat} V${food.vitamins} | ${food.cal}cal`;
+        
+        const nameSpan = document.createElement('span');
+        nameSpan.className = 'food-name';
+        nameSpan.textContent = food.name;
+        
+        div.appendChild(cb);
+        div.appendChild(statsSpan);
+        div.appendChild(nameSpan);
+        container.appendChild(div);
+    }
+}
+
+function initEventListeners() {
+    document.getElementById('toggleFoodPanelBtn').onclick = () => {
+        const panel = document.getElementById('foodPanel');
+        if (panel) {
+            if (panel.style.display === 'none') {
+                panel.style.display = 'block';
+                buildFoodUI();
+            } else {
+                panel.style.display = 'none';
+            }
+        }
+    };
+    document.getElementById('toggleAllFoods').onchange = (e) => {
+        const enabled = e.target.checked;
+        const allFoods = getAllFoods();
+        const newSet = new Set();
+        allFoods.forEach(f => { if (enabled) newSet.add(f.name); });
+        setEnabledFoods(newSet);
+        buildFoodUI();
+    };
+    document.getElementById('foodSearch').oninput = () => buildFoodUI();
+    document.getElementById('calculateBtn').onclick = generateAndShowOptimalPlan;
+    document.getElementById('randomizeBtn').onclick = generateRandomPlan;
+    
+    const inputs = ['carbs', 'protein', 'fat', 'vitamins', 'curCalories', 'maxCalories', 'ignoreCalorieLimit', 'tier', 'disableTierFilter', 'biomeFilter', 'disableBiomeFilter'];
+    inputs.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.addEventListener('change', () => {
+                const nutrients = getCurrentNutrients();
+                drawPie('beforeChart', nutrients.carbs, nutrients.protein, nutrients.fat, nutrients.vitamins);
+                updateTotalPoints();
+            });
+            if (el.type === 'number') {
+                el.addEventListener('input', () => {
+                    const nutrients = getCurrentNutrients();
+                    drawPie('beforeChart', nutrients.carbs, nutrients.protein, nutrients.fat, nutrients.vitamins);
+                    updateTotalPoints();
+                });
+            }
+        }
+    });
+    
+    const nutrients = getCurrentNutrients();
+    drawPie('beforeChart', nutrients.carbs, nutrients.protein, nutrients.fat, nutrients.vitamins);
+    drawPie('afterChart', nutrients.carbs, nutrients.protein, nutrients.fat, nutrients.vitamins);
+    updateTotalPoints();
+    buildFoodUI();
+}
+
+initEventListeners();
