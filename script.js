@@ -45,18 +45,24 @@ async function generateAndShowOptimalPlan() {
         try {
             const plans = generateOptimalPlans(current, curCal, maxCal, ignoreLimit, 1, 10000);
             if (plans.length === 0) {
-                // No plans means current state is already optimal
-                const emptyPlan = {
-                    meals: [],
-                    final: { ...current },
-                    caloriesUsed: 0,
-                    diff: Math.max(current.carbs, current.protein, current.fat, current.vitamins) -
-                           Math.min(current.carbs, current.protein, current.fat, current.vitamins)
-                };
-                displayPlan(emptyPlan, current);
-                const mealListDiv = document.getElementById('mealList');
-                if (mealListDiv) {
-                    mealListDiv.innerHTML = '✨ Your current nutrient balance is already perfect and calories are maxed out! No additional food needed.';
+                // Check if current state is already within 2 points and calories maxed
+                const diff = Math.max(current.carbs, current.protein, current.fat, current.vitamins) -
+                             Math.min(current.carbs, current.protein, current.fat, current.vitamins);
+                const caloriesAtCap = ignoreLimit || curCal >= maxCal - 10;
+                if (diff <= 2 && caloriesAtCap) {
+                    const emptyPlan = {
+                        meals: [],
+                        final: { ...current },
+                        caloriesUsed: 0,
+                        diff: diff
+                    };
+                    displayPlan(emptyPlan, current);
+                    const mealListDiv = document.getElementById('mealList');
+                    if (mealListDiv) {
+                        mealListDiv.innerHTML = '✨ Your current nutrient balance is already perfect (difference ≤2) and calories are maxed out! No additional food needed.';
+                    }
+                } else {
+                    alert('No suitable plan found with difference ≤2 points. Try enabling more foods or adjusting stats.');
                 }
                 calcBtn.textContent = originalText;
                 calcBtn.disabled = false;
@@ -84,7 +90,7 @@ function generateRandomPlan() {
         if (plan.meals.length === 0) {
             const mealListDiv = document.getElementById('mealList');
             if (mealListDiv) {
-                mealListDiv.innerHTML = '✨ Your current nutrient balance is already perfect and calories are maxed out! No additional food needed.';
+                mealListDiv.innerHTML = '✨ Your current nutrient balance is already perfect (difference ≤2) and calories are maxed out! No additional food needed.';
             }
         }
     } else {
