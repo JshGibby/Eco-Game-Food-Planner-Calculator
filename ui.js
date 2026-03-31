@@ -5,6 +5,11 @@ export function drawPie(canvasId, c, p, f, v) {
     if (!ctx) return;
     const w = canvas.width, h = canvas.height;
     ctx.clearRect(0, 0, w, h);
+    // Ensure values are numbers and not NaN
+    c = isNaN(c) ? 0 : c;
+    p = isNaN(p) ? 0 : p;
+    f = isNaN(f) ? 0 : f;
+    v = isNaN(v) ? 0 : v;
     const total = c + p + f + v;
     if (total <= 0) return;
     const vals = [c, p, f, v];
@@ -30,7 +35,14 @@ export function drawPie(canvasId, c, p, f, v) {
 
 export function displayPlan(plan, currentNutrients) {
     if (!plan) return;
-    drawPie('beforeChart', currentNutrients.carbs, currentNutrients.protein, currentNutrients.fat, currentNutrients.vitamins);
+    // Ensure current nutrients are numbers
+    const cur = {
+        carbs: isNaN(currentNutrients.carbs) ? 0 : currentNutrients.carbs,
+        protein: isNaN(currentNutrients.protein) ? 0 : currentNutrients.protein,
+        fat: isNaN(currentNutrients.fat) ? 0 : currentNutrients.fat,
+        vitamins: isNaN(currentNutrients.vitamins) ? 0 : currentNutrients.vitamins
+    };
+    drawPie('beforeChart', cur.carbs, cur.protein, cur.fat, cur.vitamins);
     drawPie('afterChart', plan.final.carbs, plan.final.protein, plan.final.fat, plan.final.vitamins);
 
     const diff = Math.max(plan.final.carbs, plan.final.protein, plan.final.fat, plan.final.vitamins) -
@@ -38,7 +50,7 @@ export function displayPlan(plan, currentNutrients) {
 
     const statsDiv = document.getElementById('statsDisplay');
     if (statsDiv) {
-        statsDiv.innerHTML = `<div><strong>Current total points:</strong> ${(currentNutrients.carbs + currentNutrients.protein + currentNutrients.fat + currentNutrients.vitamins).toFixed(1)}</div>
+        statsDiv.innerHTML = `<div><strong>Current total points:</strong> ${(cur.carbs + cur.protein + cur.fat + cur.vitamins).toFixed(1)}</div>
         <div><strong>After plan totals:</strong> C=${plan.final.carbs.toFixed(1)} P=${plan.final.protein.toFixed(1)} F=${plan.final.fat.toFixed(1)} V=${plan.final.vitamins.toFixed(1)}</div>`;
     }
 
@@ -54,15 +66,21 @@ export function displayPlan(plan, currentNutrients) {
         } else {
             const grouped = new Map();
             for (const m of plan.meals) {
+                if (!m || !m.food) continue;
                 const key = m.food.name;
                 if (!grouped.has(key)) grouped.set(key, { servings: 0, food: m.food, totalCal: 0 });
                 const e = grouped.get(key);
                 e.servings += m.servings;
-                e.totalCal += m.food.cal * m.servings;
+                e.totalCal += (m.food.cal || 0) * m.servings;
             }
             let html = '<ul style="margin:6px 0 0 20px;">';
             for (const [_, item] of grouped) {
-                html += `<li><b>${item.servings}x ${item.food.name}</b> — +${(item.food.carbs || 0) * item.servings}C / ${(item.food.protein || 0) * item.servings}P / ${(item.food.fat || 0) * item.servings}F / ${(item.food.vitamins || 0) * item.servings}V (${item.totalCal} cal)</li>`;
+                const carbsAdded = (item.food.carbs || 0) * item.servings;
+                const proteinAdded = (item.food.protein || 0) * item.servings;
+                const fatAdded = (item.food.fat || 0) * item.servings;
+                const vitaminsAdded = (item.food.vitamins || 0) * item.servings;
+                // Prevent NaN display
+                html += `<li><b>${item.servings}x ${item.food.name}</b> — +${isNaN(carbsAdded) ? 0 : carbsAdded}C / ${isNaN(proteinAdded) ? 0 : proteinAdded}P / ${isNaN(fatAdded) ? 0 : fatAdded}F / ${isNaN(vitaminsAdded) ? 0 : vitaminsAdded}V (${isNaN(item.totalCal) ? 0 : item.totalCal} cal)</li>`;
             }
             html += '</ul>';
             mealDiv.innerHTML = html;
@@ -71,7 +89,8 @@ export function displayPlan(plan, currentNutrients) {
 
     const calorieInfo = document.getElementById('calorieInfo');
     if (calorieInfo) {
-        calorieInfo.innerHTML = `🔥 Calories added: ${plan.caloriesUsed.toFixed(0)}`;
+        const calUsed = isNaN(plan.caloriesUsed) ? 0 : plan.caloriesUsed;
+        calorieInfo.innerHTML = `🔥 Calories added: ${calUsed.toFixed(0)}`;
     }
 
     const totalsDiv = document.getElementById('totalsDisplay');
