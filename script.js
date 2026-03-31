@@ -14,6 +14,13 @@ function getCurrentNutrients() {
     };
 }
 
+function updateTotalPoints() {
+    const nutrients = getCurrentNutrients();
+    const total = nutrients.carbs + nutrients.protein + nutrients.fat + nutrients.vitamins;
+    const totalSpan = document.getElementById('totalPointsValue');
+    if (totalSpan) totalSpan.textContent = total;
+}
+
 function getCurrentCalories() {
     return parseFloat(document.getElementById('curCalories').value) || 0;
 }
@@ -41,7 +48,6 @@ async function generateAndShowPlans() {
         try {
             const plans = generateOptimalPlans(current, curCal, maxCal, ignoreLimit, 20, 10000);
             if (plans.length === 0) {
-                // No plans means current state is already optimal
                 const emptyPlan = {
                     meals: [],
                     final: { ...current },
@@ -109,6 +115,8 @@ function buildFoodUI() {
     for (const food of foods) {
         const div = document.createElement('div');
         div.className = 'food-item';
+        
+        // Checkbox
         const cb = document.createElement('input');
         cb.type = 'checkbox';
         cb.checked = isEnabled(food.name);
@@ -121,10 +129,20 @@ function buildFoodUI() {
             const section = document.getElementById('optimalPlansSection');
             if (section) section.style.display = 'none';
         };
-        const label = document.createElement('label');
-        label.textContent = `${food.name} (C${food.carbs} P${food.protein} F${food.fat} V${food.vitamins} | ${food.cal} cal)`;
+        
+        // Stats badge (left side)
+        const statsSpan = document.createElement('span');
+        statsSpan.className = 'food-stats';
+        statsSpan.textContent = `C${food.carbs} P${food.protein} F${food.fat} V${food.vitamins} | ${food.cal}cal`;
+        
+        // Food name (right side)
+        const nameSpan = document.createElement('span');
+        nameSpan.className = 'food-name';
+        nameSpan.textContent = food.name;
+        
         div.appendChild(cb);
-        div.appendChild(label);
+        div.appendChild(statsSpan);
+        div.appendChild(nameSpan);
         container.appendChild(div);
     }
 }
@@ -164,11 +182,13 @@ function initEventListeners() {
             el.addEventListener('change', () => {
                 const nutrients = getCurrentNutrients();
                 drawPie('beforeChart', nutrients.carbs, nutrients.protein, nutrients.fat, nutrients.vitamins);
+                updateTotalPoints();
             });
             if (el.type === 'number') {
                 el.addEventListener('input', () => {
                     const nutrients = getCurrentNutrients();
                     drawPie('beforeChart', nutrients.carbs, nutrients.protein, nutrients.fat, nutrients.vitamins);
+                    updateTotalPoints();
                 });
             }
         }
@@ -177,6 +197,7 @@ function initEventListeners() {
     const nutrients = getCurrentNutrients();
     drawPie('beforeChart', nutrients.carbs, nutrients.protein, nutrients.fat, nutrients.vitamins);
     drawPie('afterChart', nutrients.carbs, nutrients.protein, nutrients.fat, nutrients.vitamins);
+    updateTotalPoints();
     buildFoodUI();
 }
 
