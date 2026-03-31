@@ -308,9 +308,9 @@ function getFilter() {
     const biomeEl = document.getElementById('biomeFilter');
     const disableBiomeEl = document.getElementById('disableBiomeFilter');
     const tier = tierEl ? tierEl.value : 'all';
-    const disableTier = disableTierEl ? disableTierEl.checked : true;
+    const disableTier = disableTierEl ? disableTierEl.checked : false;
     const biome = biomeEl ? biomeEl.value : 'all';
-    const disableBiome = disableBiomeEl ? disableBiomeEl.checked : true;
+    const disableBiome = disableBiomeEl ? disableBiomeEl.checked : false;
     return f => {
         if (!enabledFoods.has(f.name)) return false;
         if (!disableTier && tier !== 'all' && f.tier !== tier) return false;
