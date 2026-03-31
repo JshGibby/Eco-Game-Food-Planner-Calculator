@@ -158,32 +158,141 @@ canvas {
     display: block;
 }
 
+/* ----- Food Selector Panel (beautiful redesign) ----- */
 .food-panel {
-    background: #fefdf8;
-    border-radius: 28px;
+    background: #ffffff;
+    border-radius: 32px;
     margin: 20px 0;
-    padding: 18px;
-    border: 1px solid #dee9ed;
+    padding: 24px;
+    border: 1px solid #e2eef2;
+    box-shadow: 0 12px 24px -12px rgba(0, 0, 0, 0.08);
+}
+
+.food-panel h3 {
+    font-size: 1.3rem;
+    font-weight: 600;
+    color: #1a5a56;
+    margin-bottom: 16px;
+}
+
+.food-panel .search-wrapper {
+    margin-bottom: 20px;
+}
+
+.food-panel input#foodSearch {
+    width: 100%;
+    padding: 12px 18px;
+    font-size: 0.95rem;
+    border-radius: 60px;
+    border: 1px solid #d0e0e5;
+    background: #fefefe;
+    transition: all 0.2s;
+}
+
+.food-panel input#foodSearch:focus {
+    border-color: #2b9b8f;
+    box-shadow: 0 0 0 3px rgba(43, 155, 143, 0.1);
 }
 
 .food-list {
-    max-height: 280px;
+    max-height: 480px;
     overflow-y: auto;
-    border-radius: 20px;
-    background: #fff;
-    padding: 6px;
-    border: 1px solid #e0ecef;
+    border-radius: 24px;
+    background: #fafefc;
+    padding: 8px;
+    margin-top: 16px;
 }
 
 .food-item {
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 8px 8px;
-    border-bottom: 1px solid #eef3f5;
-    font-size: 0.85rem;
+    gap: 14px;
+    padding: 12px 16px;
+    border-bottom: 1px solid #e8f0f3;
+    transition: background 0.1s ease;
+    border-radius: 14px;
+    margin: 2px 0;
 }
 
+.food-item:hover {
+    background: #f0f9f7;
+}
+
+.food-item input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    margin: 0;
+    cursor: pointer;
+    accent-color: #2b9b8f;
+    flex-shrink: 0;
+}
+
+.food-item label {
+    flex: 1;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #1e3b38;
+    text-transform: none;
+    letter-spacing: normal;
+    margin: 0;
+    cursor: pointer;
+    line-height: 1.4;
+}
+
+.food-item label:hover {
+    color: #0f665c;
+}
+
+/* Checkbox group for "Enable All" */
+.food-panel .checkbox-group {
+    margin: 20px 0 12px;
+    padding: 8px 0;
+    border-top: 1px solid #e2edf0;
+    border-bottom: 1px solid #e2edf0;
+}
+
+.food-panel .checkbox-group label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #1a5a56;
+}
+
+/* Scrollbar styling */
+.food-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.food-list::-webkit-scrollbar-track {
+    background: #e9f0f3;
+    border-radius: 10px;
+}
+
+.food-list::-webkit-scrollbar-thumb {
+    background: #bcd3ce;
+    border-radius: 10px;
+}
+
+.food-list::-webkit-scrollbar-thumb:hover {
+    background: #9bbbb3;
+}
+
+/* Responsive adjustments */
+@media (max-width: 860px) {
+    .results-area {
+        grid-template-columns: 1fr;
+    }
+    .eco-container {
+        padding: 18px;
+    }
+    .food-item {
+        padding: 10px 12px;
+    }
+    .food-item label {
+        font-size: 0.85rem;
+    }
+}
+
+/* Additional small improvements */
 .perfect-badge {
     background: #14805e;
     color: white;
@@ -254,11 +363,12 @@ canvas {
     margin: 16px 0 0;
 }
 
-@media (max-width: 860px) {
-    .results-area {
-        grid-template-columns: 1fr;
-    }
-    .eco-container {
-        padding: 18px;
-    }
+#currentTotalPoints {
+    background: #eef2f5;
+    border-radius: 40px;
+    text-align: center;
+    font-weight: 700;
+    font-size: 0.9rem;
+    padding: 8px 12px;
+    margin-top: 12px;
 }
