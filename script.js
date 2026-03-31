@@ -30,11 +30,26 @@ function getIgnoreLimit() {
     return document.getElementById('ignoreCalorieLimit').checked;
 }
 
+function getMaxDistinct() {
+    const slider = document.getElementById('maxDistinctSlider');
+    return slider ? parseInt(slider.value, 10) : 4;
+}
+
+// Update slider display
+function updateSliderDisplay() {
+    const slider = document.getElementById('maxDistinctSlider');
+    const display = document.getElementById('maxDistinctValue');
+    if (slider && display) {
+        display.textContent = slider.value;
+    }
+}
+
 async function generateAndShowOptimalPlan() {
     const current = getCurrentNutrients();
     const curCal = getCurrentCalories();
     const maxCal = getMaxCalories();
     const ignoreLimit = getIgnoreLimit();
+    const maxDistinct = getMaxDistinct();
     
     const calcBtn = document.getElementById('calculateBtn');
     const originalText = calcBtn.textContent;
@@ -43,9 +58,8 @@ async function generateAndShowOptimalPlan() {
     
     setTimeout(() => {
         try {
-            const plans = generateOptimalPlans(current, curCal, maxCal, ignoreLimit, 1, 10000);
+            const plans = generateOptimalPlans(current, curCal, maxCal, ignoreLimit, maxDistinct, 1, 10000);
             if (plans.length === 0) {
-                // Check if current state is already within 2 points and calories maxed
                 const diff = Math.max(current.carbs, current.protein, current.fat, current.vitamins) -
                              Math.min(current.carbs, current.protein, current.fat, current.vitamins);
                 const caloriesAtCap = ignoreLimit || curCal >= maxCal - 10;
@@ -84,7 +98,8 @@ function generateRandomPlan() {
     const curCal = getCurrentCalories();
     const maxCal = getMaxCalories();
     const ignoreLimit = getIgnoreLimit();
-    const plan = generateRandomPlanOnly(current, curCal, maxCal, ignoreLimit);
+    const maxDistinct = getMaxDistinct();
+    const plan = generateRandomPlanOnly(current, curCal, maxCal, ignoreLimit, maxDistinct);
     if (plan) {
         displayPlan(plan, current);
         if (plan.meals.length === 0) {
@@ -134,6 +149,13 @@ function buildFoodUI() {
 }
 
 function initEventListeners() {
+    // Slider event
+    const slider = document.getElementById('maxDistinctSlider');
+    if (slider) {
+        slider.addEventListener('input', updateSliderDisplay);
+        updateSliderDisplay();
+    }
+    
     document.getElementById('toggleFoodPanelBtn').onclick = () => {
         const panel = document.getElementById('foodPanel');
         if (panel) {
