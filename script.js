@@ -1,4 +1,4 @@
-import { getFilteredFoods, toggleFood, isEnabled, getAllFoods, setEnabledFoods, getEnabledFoods } from './filters.js';
+import { getFilteredFoods, toggleFood, isEnabled, getAllFoods, setEnabledFoods } from './filters.js';
 import { generateOptimalPlans, generateRandomPlanOnly } from './planGenerator.js';
 import { drawPie, displayPlan, renderPlanList } from './ui.js';
 
@@ -14,31 +14,48 @@ function getCurrentNutrients() {
     };
 }
 
-function getMaxRemainingCalories() {
-    const curCal = parseFloat(document.getElementById('curCalories').value) || 0;
-    const maxCal = parseFloat(document.getElementById('maxCalories').value) || 3000;
-    const ignoreLimit = document.getElementById('ignoreCalorieLimit').checked;
-    if (ignoreLimit) return Infinity;
-    return Math.max(0, maxCal - curCal);
+function getCurrentCalories() {
+    return parseFloat(document.getElementById('curCalories').value) || 0;
+}
+
+function getMaxCalories() {
+    return parseFloat(document.getElementById('maxCalories').value) || 3000;
+}
+
+function getIgnoreLimit() {
+    return document.getElementById('ignoreCalorieLimit').checked;
 }
 
 async function generateAndShowPlans() {
     const current = getCurrentNutrients();
-    const maxCal = getMaxRemainingCalories();
-    const ignoreLimit = document.getElementById('ignoreCalorieLimit').checked;
+    const curCal = getCurrentCalories();
+    const maxCal = getMaxCalories();
+    const ignoreLimit = getIgnoreLimit();
     
-    // Show loading indicator (optional)
     const calcBtn = document.getElementById('calculateBtn');
     const originalText = calcBtn.textContent;
     calcBtn.textContent = '⚡ Generating...';
     calcBtn.disabled = true;
     
-    // Use setTimeout to allow UI update
     setTimeout(() => {
         try {
-            const plans = generateOptimalPlans(current, maxCal, ignoreLimit, 20, 10000);
+            const plans = generateOptimalPlans(current, curCal, maxCal, ignoreLimit, 20, 10000);
             if (plans.length === 0) {
-                alert('No suitable plans found. Try enabling more foods or adjusting stats.');
+                // No plans means current state is already optimal
+                const emptyPlan = {
+                    meals: [],
+                    final: { ...current },
+                    caloriesUsed: 0,
+                    diff: Math.max(current.carbs, current.protein, current.fat, current.vitamins) -
+                           Math.min(current.carbs, current.protein, current.fat, current.vitamins)
+                };
+                displayPlan(emptyPlan, current);
+                const section = document.getElementById('optimalPlansSection');
+                if (section) section.style.display = 'none';
+                const mealListDiv = document.getElementById('mealList');
+                if (mealListDiv) {
+                    mealListDiv.innerHTML = '✨ Your current nutrient balance is already perfect and calories are maxed out! No additional food needed.';
+                }
                 calcBtn.textContent = originalText;
                 calcBtn.disabled = false;
                 return;
@@ -63,13 +80,20 @@ async function generateAndShowPlans() {
 
 function generateRandomPlan() {
     const current = getCurrentNutrients();
-    const maxCal = getMaxRemainingCalories();
-    const ignoreLimit = document.getElementById('ignoreCalorieLimit').checked;
-    const plan = generateRandomPlanOnly(current, maxCal, ignoreLimit);
+    const curCal = getCurrentCalories();
+    const maxCal = getMaxCalories();
+    const ignoreLimit = getIgnoreLimit();
+    const plan = generateRandomPlanOnly(current, curCal, maxCal, ignoreLimit);
     if (plan) {
         displayPlan(plan, current);
         const section = document.getElementById('optimalPlansSection');
         if (section) section.style.display = 'none';
+        if (plan.meals.length === 0) {
+            const mealListDiv = document.getElementById('mealList');
+            if (mealListDiv) {
+                mealListDiv.innerHTML = '✨ Your current nutrient balance is already perfect and calories are maxed out! No additional food needed.';
+            }
+        }
     } else {
         alert('No foods available to generate a random plan.');
     }
@@ -92,7 +116,6 @@ function buildFoodUI() {
             toggleFood(food.name, e.target.checked);
             const toggleAll = document.getElementById('toggleAllFoods');
             if (toggleAll) toggleAll.checked = getAllFoods().every(f => isEnabled(f.name));
-            // Invalidate any previous plans because available foods changed
             currentOptimalPlans = [];
             selectedPlanIndex = -1;
             const section = document.getElementById('optimalPlansSection');
@@ -134,7 +157,6 @@ function initEventListeners() {
     document.getElementById('calculateBtn').onclick = generateAndShowPlans;
     document.getElementById('randomizeBtn').onclick = generateRandomPlan;
     
-    // Update pie charts when inputs change
     const inputs = ['carbs', 'protein', 'fat', 'vitamins', 'curCalories', 'maxCalories', 'ignoreCalorieLimit', 'tier', 'disableTierFilter', 'biomeFilter', 'disableBiomeFilter'];
     inputs.forEach(id => {
         const el = document.getElementById(id);
@@ -142,10 +164,6 @@ function initEventListeners() {
             el.addEventListener('change', () => {
                 const nutrients = getCurrentNutrients();
                 drawPie('beforeChart', nutrients.carbs, nutrients.protein, nutrients.fat, nutrients.vitamins);
-                if (currentOptimalPlans.length > 0 && selectedPlanIndex >= 0) {
-                    // Optionally refresh display with current plan? Maybe not, but we can show the last plan's final numbers
-                    // We'll just keep the last plan, but the pie for after might be stale; we could recompute final from last plan but better to leave as is.
-                }
             });
             if (el.type === 'number') {
                 el.addEventListener('input', () => {
@@ -156,12 +174,10 @@ function initEventListeners() {
         }
     });
     
-    // Initial draw
     const nutrients = getCurrentNutrients();
     drawPie('beforeChart', nutrients.carbs, nutrients.protein, nutrients.fat, nutrients.vitamins);
     drawPie('afterChart', nutrients.carbs, nutrients.protein, nutrients.fat, nutrients.vitamins);
     buildFoodUI();
 }
 
-// Start the application
 initEventListeners();
