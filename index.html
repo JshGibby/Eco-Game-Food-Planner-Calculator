@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eco — Perfect Balance Meal Planner</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="eco-container">
+        <h1>🌾 ECO: PERFECT QUARTER PLANNER <small>25% Carbs · 25% Protein · 25% Fats · 25% Vitamins</small></h1>
+
+        <div class="input-grid">
+            <div class="input-card">
+                <label>🍞 CARBS (current)</label>
+                <input type="number" id="carbs" value="8" step="1">
+                <label>🍗 PROTEIN (current)</label>
+                <input type="number" id="protein" value="12" step="1">
+                <label>🧈 FAT (current)</label>
+                <input type="number" id="fat" value="6" step="1">
+                <label>🥕 VITAMINS (current)</label>
+                <input type="number" id="vitamins" value="14" step="1">
+            </div>
+            <div class="input-card">
+                <label>🔥 CURRENT CALORIES</label>
+                <input type="number" id="curCalories" value="1200" step="100">
+                <label>💪 MAX CALORIE CAPACITY</label>
+                <input type="number" id="maxCalories" value="3000" step="100">
+                <div class="checkbox-group">
+                    <input type="checkbox" id="ignoreCalorieLimit">
+                    <label>🔓 Ignore calorie limit (unlimited additions)</label>
+                </div>
+                <label>🎮 PLAYER TIER</label>
+                <select id="tier">
+                    <option value="all">🌟 All Foods</option>
+                    <option value="starter">🌱 Starter</option>
+                    <option value="campfire">🔥 Campfire Cook</option>
+                    <option value="gatherer">🍄 Gatherer</option>
+                    <option value="baked">🍞 Baked Food</option>
+                    <option value="cooked">🍲 Cooked Food</option>
+                    <option value="advanced">🏆 Advanced</option>
+                </select>
+                <div class="checkbox-group">
+                    <input type="checkbox" id="disableTierFilter">
+                    <label>❌ Disable tier filter</label>
+                </div>
+                <label>🗺️ BIOME PREFERENCE</label>
+                <select id="biomeFilter">
+                    <option value="all">🌍 Any Biome</option>
+                    <option value="forest">🌲 Forest</option>
+                    <option value="grassland">🌾 Grassland</option>
+                    <option value="desert">🏜️ Desert</option>
+                    <option value="rainforest">🌧️ Rainforest</option>
+                    <option value="aquatic">💧 Aquatic</option>
+                </select>
+                <div class="checkbox-group">
+                    <input type="checkbox" id="disableBiomeFilter">
+                    <label>❌ Disable biome filter</label>
+                </div>
+            </div>
+        </div>
+
+        <div class="btn-group">
+            <button id="toggleFoodPanelBtn">📋 FOOD SELECTOR (enable/disable)</button>
+            <button id="calculateBtn">⚡ OPTIMAL PLAN (20 combos)</button>
+            <button id="randomizeBtn">🎲 RANDOM PLAN</button>
+        </div>
+
+        <div id="foodPanel" class="food-panel" style="display: none;">
+            <div style="display: flex; justify-content: space-between;">
+                <h3 style="margin:0;">🍽️ Active Food Database</h3>
+                <span style="font-size:0.7rem;">✅ check = available</span>
+            </div>
+            <div style="margin: 12px 0;">
+                <input type="text" id="foodSearch" placeholder="🔍 search food...">
+            </div>
+            <div class="checkbox-group">
+                <input type="checkbox" id="toggleAllFoods" checked>
+                <label style="margin:0;">✔️ Enable / Disable All Foods</label>
+            </div>
+            <div id="foodListContainer" class="food-list"></div>
+        </div>
+
+        <div class="results-area">
+            <div class="stat-card">
+                <h3 style="margin:0 0 12px 0;">📊 NUTRIENT BALANCE & MEAL PLAN</h3>
+                <div id="statsDisplay"></div>
+                <div id="algebraBox" class="math-note"></div>
+
+                <div class="meal-plan">
+                    <h4 style="margin:0 0 8px 0;">🍽️ SELECTED MEAL PLAN</h4>
+                    <div id="mealList">✨ Click "Optimal Plan" to generate perfect quartered plans</div>
+                    <div id="balanceQuality" style="margin-top: 8px;"></div>
+                    <div id="calorieInfo" style="margin-top: 6px; font-weight: 500;"></div>
+                    <div id="totalsDisplay" style="margin-top: 10px; font-weight: 800;"></div>
+                </div>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 20px;">
+                <div class="chart-panel">
+                    <h3>🥧 CURRENT NUTRIENTS</h3>
+                    <canvas id="beforeChart" width="280" height="280"></canvas>
+                </div>
+                <div class="chart-panel">
+                    <h3>🎯 AFTER PLAN (target 25% each)</h3>
+                    <canvas id="afterChart" width="280" height="280"></canvas>
+                    <div style="margin-top: 8px;"><span class="perfect-badge">✓ PERFECT QUARTER GOAL</span></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="plan-card-list" id="optimalPlansSection" style="display: none;">
+            <h3>📋 20 OPTIMAL COMBINATIONS (balanced 25% each + max calories)</h3>
+            <div id="optimalPlansContainer" class="plan-cards"></div>
+            <p style="font-size:0.75rem; margin-top:10px;">✨ Click any plan to preview — each plan aims for equal Carbs/Protein/Fat/Vitamins and uses max available calories</p>
+        </div>
+    </div>
+
+    <script type="module" src="script.js"></script>
+</body>
+</html>
