@@ -1,5 +1,13 @@
 import { getFilteredFoods } from './filters.js';
 
+// Helper: check if nutrient values are balanced within a tolerance
+function isBalanced(nutrients, tolerance = 5) {
+    const vals = [nutrients.carbs, nutrients.protein, nutrients.fat, nutrients.vitamins];
+    const maxVal = Math.max(...vals);
+    const minVal = Math.min(...vals);
+    return (maxVal - minVal) <= tolerance;
+}
+
 function computePlanTotals(plan, currentNutrients) {
     const totals = { 
         carbs: currentNutrients.carbs, 
@@ -33,7 +41,6 @@ function generateRandomPlan(availableFoods, maxCalories, ignoreLimit, maxDistinc
     
     for (const food of shuffled) {
         if (usedFoods.size >= maxDistinct) break;
-        // Skip foods with non‑positive calories if limit is not ignored
         if (!ignoreLimit && food.cal <= 0) continue;
         if (food.cal > remainingCal && !ignoreLimit) continue;
         const maxS = ignoreLimit ? maxServingsPerFood : Math.min(maxServingsPerFood, Math.floor(remainingCal / food.cal));
@@ -54,17 +61,24 @@ function evaluatePlan(plan, currentNutrients) {
     return { totals, diff, caloriesUsed: totals.calories };
 }
 
-export function generateOptimalPlans(currentNutrients, maxCalories, ignoreLimit, numPlans = 20, iterations = 8000) {
+export function generateOptimalPlans(currentNutrients, currentCalories, maxCalories, ignoreLimit, numPlans = 20, iterations = 8000) {
+    // 1. If current state is already balanced and calories are already maxed (or ignore limit), no plan needed
+    const balanced = isBalanced(currentNutrients);
+    const caloriesAtCap = ignoreLimit || currentCalories >= maxCalories - 10; // within 10 calories of max
+    if (balanced && caloriesAtCap) {
+        return []; // empty plan list – no food needed
+    }
+    
     const available = getFilteredFoods();
     if (available.length === 0) return [];
     
     const candidatePlans = [];
     
     for (let i = 0; i < iterations; i++) {
-        const plan = generateRandomPlan(available, maxCalories, ignoreLimit);
+        const plan = generateRandomPlan(available, maxCalories - currentCalories, ignoreLimit);
         if (plan.length === 0) continue;
         const { totals, diff, caloriesUsed } = evaluatePlan(plan, currentNutrients);
-        // Ensure no NaN in final totals (just in case)
+        // Ensure no NaN
         if (isNaN(totals.carbs) || isNaN(totals.protein) || isNaN(totals.fat) || isNaN(totals.vitamins)) continue;
         candidatePlans.push({
             meals: plan,
@@ -90,10 +104,23 @@ export function generateOptimalPlans(currentNutrients, maxCalories, ignoreLimit,
     return sorted.slice(0, numPlans);
 }
 
-export function generateRandomPlanOnly(currentNutrients, maxCalories, ignoreLimit) {
+export function generateRandomPlanOnly(currentNutrients, currentCalories, maxCalories, ignoreLimit) {
     const available = getFilteredFoods();
     if (available.length === 0) return null;
-    const plan = generateRandomPlan(available, maxCalories, ignoreLimit, 10, 5);
+    
+    // If already balanced and calories at cap, return empty plan
+    const balanced = isBalanced(currentNutrients);
+    const caloriesAtCap = ignoreLimit || currentCalories >= maxCalories - 10;
+    if (balanced && caloriesAtCap) {
+        return {
+            meals: [],
+            final: { ...currentNutrients },
+            caloriesUsed: 0,
+            diff: 0
+        };
+    }
+    
+    const plan = generateRandomPlan(available, maxCalories - currentCalories, ignoreLimit, 10, 5);
     const { totals, diff, caloriesUsed } = evaluatePlan(plan, currentNutrients);
     return {
         meals: plan,
