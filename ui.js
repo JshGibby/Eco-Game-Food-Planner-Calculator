@@ -54,7 +54,7 @@ export function displayPlan(plan, currentNutrients) {
 
     const algebraDiv = document.getElementById('algebraBox');
     if (algebraDiv) {
-        algebraDiv.innerHTML = `<strong>🎯 PERFECT QUARTER CHECK</strong><br>Diff (max-min) = ${diff.toFixed(2)} points → ${diff <= 5 ? '✅ BALANCED (25% each)' : '⚠️ Not yet balanced'}`;
+        algebraDiv.innerHTML = `<strong>🎯 PERFECT QUARTER CHECK</strong><br>Diff (max-min) = ${diff.toFixed(2)} points → ${diff <= 2 ? '✅ PERFECT BALANCE (within 2 points)' : '⚠️ Not yet balanced (needs ≤2 points)'}`;
     }
 
     const mealDiv = document.getElementById('mealList');
@@ -97,6 +97,10 @@ export function displayPlan(plan, currentNutrients) {
 
     const balanceDiv = document.getElementById('balanceQuality');
     if (balanceDiv) {
-        balanceDiv.innerHTML = diff <= 8 ? `<span class="perfect-badge">🌟 Nutrients balanced within ${diff.toFixed(1)} points! 25% target achieved.</span>` : `<span>⚖️ Balance difference: ${diff.toFixed(1)} points (closer to equal = perfect quarter)</span>`;
+        if (diff <= 2) {
+            balanceDiv.innerHTML = `<span class="perfect-badge">🌟 PERFECT BALANCE! All nutrients within 2 points of each other. 25% target achieved.</span>`;
+        } else {
+            balanceDiv.innerHTML = `<span>⚖️ Balance difference: ${diff.toFixed(1)} points (needs to be ≤2 for perfect balance).</span>`;
+        }
     }
 }
