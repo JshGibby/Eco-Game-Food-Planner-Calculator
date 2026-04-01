@@ -28,7 +28,7 @@ function computePlanTotals(plan, currentNutrients) {
     return totals;
 }
 
-function generateRandomPlan(availableFoods, maxCalories, ignoreLimit, maxDistinct = 4, maxServingsPerFood = 3) {
+function generateRandomPlan(availableFoods, maxCalories, ignoreLimit, maxDistinct = 3, maxServingsPerFood = 1) {
     const plan = [];
     let remainingCal = ignoreLimit ? 1e9 : maxCalories;
     const usedFoods = new Set();
@@ -61,7 +61,7 @@ function evaluatePlan(plan, currentNutrients) {
     return { totals, diff, caloriesUsed: totals.calories };
 }
 
-export function generateOptimalPlans(currentNutrients, currentCalories, maxCalories, ignoreLimit, maxDistinct = 4, maxServingsPerFood = 3, tolerance = 2, numPlans = 50, iterations = 20000) {
+export function generateOptimalPlans(currentNutrients, currentCalories, maxCalories, ignoreLimit, maxDistinct = 3, maxServingsPerFood =1, tolerance = 1, numPlans = 100, iterations = 50000) {
     // If current state is already within tolerance and calories are maxed, return empty
     const balanced = isBalanced(currentNutrients, tolerance);
     const caloriesAtCap = ignoreLimit || currentCalories >= maxCalories - 10;
@@ -110,7 +110,7 @@ export function generateRandomPlanOnly(currentNutrients, currentCalories, maxCal
     if (available.length === 0) return null;
     
     // For random, we still use a fixed tolerance of 2 for "already perfect" check? Keep consistent.
-    const balanced = isBalanced(currentNutrients, 2);
+    const balanced = isBalanced(currentNutrients, 1);
     const caloriesAtCap = ignoreLimit || currentCalories >= maxCalories - 10;
     if (balanced && caloriesAtCap) {
         return {
