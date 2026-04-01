@@ -1,7 +1,7 @@
 import { getFilteredFoods } from './filters.js';
 
-// Helper: check if nutrient values are balanced within a tolerance
-function isBalanced(nutrients, tolerance = 2) {
+// Helper: check if nutrient values are balanced within a given tolerance
+function isBalanced(nutrients, tolerance) {
     const vals = [nutrients.carbs, nutrients.protein, nutrients.fat, nutrients.vitamins];
     const maxVal = Math.max(...vals);
     const minVal = Math.min(...vals);
@@ -61,9 +61,9 @@ function evaluatePlan(plan, currentNutrients) {
     return { totals, diff, caloriesUsed: totals.calories };
 }
 
-export function generateOptimalPlans(currentNutrients, currentCalories, maxCalories, ignoreLimit, maxDistinct = 4, numPlans = 50, iterations = 20000) {
-    // If current state is already perfect and calories are maxed, return empty
-    const balanced = isBalanced(currentNutrients);
+export function generateOptimalPlans(currentNutrients, currentCalories, maxCalories, ignoreLimit, maxDistinct = 4, tolerance = 2, numPlans = 50, iterations = 20000) {
+    // If current state is already within tolerance and calories are maxed, return empty
+    const balanced = isBalanced(currentNutrients, tolerance);
     const caloriesAtCap = ignoreLimit || currentCalories >= maxCalories - 10;
     if (balanced && caloriesAtCap) {
         return [];
@@ -79,8 +79,8 @@ export function generateOptimalPlans(currentNutrients, currentCalories, maxCalor
         if (plan.length === 0) continue;
         const { totals, diff, caloriesUsed } = evaluatePlan(plan, currentNutrients);
         if (isNaN(totals.carbs) || isNaN(totals.protein) || isNaN(totals.fat) || isNaN(totals.vitamins)) continue;
-        // Only keep plans that achieve perfect balance (diff <= 2)
-        if (diff <= 2) {
+        // Only keep plans that meet the tolerance
+        if (diff <= tolerance) {
             candidatePlans.push({
                 meals: plan,
                 final: { carbs: totals.carbs, protein: totals.protein, fat: totals.fat, vitamins: totals.vitamins },
@@ -109,7 +109,8 @@ export function generateRandomPlanOnly(currentNutrients, currentCalories, maxCal
     const available = getFilteredFoods();
     if (available.length === 0) return null;
     
-    const balanced = isBalanced(currentNutrients);
+    // For random, we still use a fixed tolerance of 2 for "already perfect" check? Keep consistent.
+    const balanced = isBalanced(currentNutrients, 2);
     const caloriesAtCap = ignoreLimit || currentCalories >= maxCalories - 10;
     if (balanced && caloriesAtCap) {
         return {
