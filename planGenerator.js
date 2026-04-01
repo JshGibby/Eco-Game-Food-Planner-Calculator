@@ -61,7 +61,7 @@ function evaluatePlan(plan, currentNutrients) {
     return { totals, diff, caloriesUsed: totals.calories };
 }
 
-export function generateOptimalPlans(currentNutrients, currentCalories, maxCalories, ignoreLimit, maxDistinct = 4, tolerance = 2, numPlans = 50, iterations = 20000) {
+export function generateOptimalPlans(currentNutrients, currentCalories, maxCalories, ignoreLimit, maxDistinct = 4, maxServingsPerFood = 3, tolerance = 2, numPlans = 50, iterations = 20000) {
     // If current state is already within tolerance and calories are maxed, return empty
     const balanced = isBalanced(currentNutrients, tolerance);
     const caloriesAtCap = ignoreLimit || currentCalories >= maxCalories - 10;
@@ -75,7 +75,7 @@ export function generateOptimalPlans(currentNutrients, currentCalories, maxCalor
     const candidatePlans = [];
     
     for (let i = 0; i < iterations; i++) {
-        const plan = generateRandomPlan(available, maxCalories - currentCalories, ignoreLimit, maxDistinct);
+        const plan = generateRandomPlan(available, maxCalories - currentCalories, ignoreLimit, maxDistinct, maxServingsPerFood);
         if (plan.length === 0) continue;
         const { totals, diff, caloriesUsed } = evaluatePlan(plan, currentNutrients);
         if (isNaN(totals.carbs) || isNaN(totals.protein) || isNaN(totals.fat) || isNaN(totals.vitamins)) continue;
@@ -105,7 +105,7 @@ export function generateOptimalPlans(currentNutrients, currentCalories, maxCalor
     return sorted.slice(0, numPlans);
 }
 
-export function generateRandomPlanOnly(currentNutrients, currentCalories, maxCalories, ignoreLimit, maxDistinct = 4) {
+export function generateRandomPlanOnly(currentNutrients, currentCalories, maxCalories, ignoreLimit, maxDistinct = 4, maxServingsPerFood = 3) {
     const available = getFilteredFoods();
     if (available.length === 0) return null;
     
@@ -122,7 +122,7 @@ export function generateRandomPlanOnly(currentNutrients, currentCalories, maxCal
         };
     }
     
-    const plan = generateRandomPlan(available, maxCalories - currentCalories, ignoreLimit, maxDistinct, 5);
+    const plan = generateRandomPlan(available, maxCalories - currentCalories, ignoreLimit, maxDistinct, maxServingsPerFood);
     const { totals, diff, caloriesUsed } = evaluatePlan(plan, currentNutrients);
     return {
         meals: plan,
