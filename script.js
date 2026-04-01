@@ -36,17 +36,17 @@ function getIgnoreLimit() {
 
 function getMaxDistinct() {
     const slider = document.getElementById('maxDistinctSlider');
-    return slider ? parseInt(slider.value, 10) : 4;
+    return slider ? parseInt(slider.value, 10) : 10;
 }
 
 function getMaxServingsPerFood() {
     const slider = document.getElementById('maxServingsSlider');
-    return slider ? parseInt(slider.value, 10) : 3;
+    return slider ? parseInt(slider.value, 10) : 10;
 }
 
 function getTolerance() {
     const slider = document.getElementById('toleranceSlider');
-    return slider ? parseInt(slider.value, 10) : 2;
+    return slider ? parseInt(slider.value, 10) : 100;
 }
 
 function updateSliderDisplay() {
