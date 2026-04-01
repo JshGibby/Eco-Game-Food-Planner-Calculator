@@ -2,6 +2,10 @@ import { getFilteredFoods, toggleFood, isEnabled, getAllFoods, setEnabledFoods }
 import { generateOptimalPlans, generateRandomPlanOnly } from './planGenerator.js';
 import { drawPie, displayPlan } from './ui.js';
 
+// Cached plans and current index
+let cachedPlans = null;
+let currentPlanIndex = -1;
+
 function getCurrentNutrients() {
     return {
         carbs: parseFloat(document.getElementById('carbs').value) || 0,
@@ -35,13 +39,20 @@ function getMaxDistinct() {
     return slider ? parseInt(slider.value, 10) : 4;
 }
 
-// Update slider display
 function updateSliderDisplay() {
     const slider = document.getElementById('maxDistinctSlider');
     const display = document.getElementById('maxDistinctValue');
     if (slider && display) {
         display.textContent = slider.value;
     }
+}
+
+// Invalidate cached plans when any relevant input changes
+function invalidateCache() {
+    cachedPlans = null;
+    currentPlanIndex = -1;
+    const planCounter = document.getElementById('planCounter');
+    if (planCounter) planCounter.textContent = '';
 }
 
 async function generateAndShowOptimalPlan() {
@@ -53,12 +64,23 @@ async function generateAndShowOptimalPlan() {
     
     const calcBtn = document.getElementById('calculateBtn');
     const originalText = calcBtn.textContent;
+    
+    // If we have cached plans and index is within range, just cycle
+    if (cachedPlans && cachedPlans.length > 0 && currentPlanIndex >= 0) {
+        // Move to next plan (wrap around)
+        currentPlanIndex = (currentPlanIndex + 1) % cachedPlans.length;
+        displayPlan(cachedPlans[currentPlanIndex], current);
+        updatePlanCounter();
+        return;
+    }
+    
+    // Otherwise generate new plans
     calcBtn.textContent = '⚡ Generating...';
     calcBtn.disabled = true;
     
     setTimeout(() => {
         try {
-            const plans = generateOptimalPlans(current, curCal, maxCal, ignoreLimit, maxDistinct, 1, 10000);
+            const plans = generateOptimalPlans(current, curCal, maxCal, ignoreLimit, maxDistinct, 20, 10000);
             if (plans.length === 0) {
                 const diff = Math.max(current.carbs, current.protein, current.fat, current.vitamins) -
                              Math.min(current.carbs, current.protein, current.fat, current.vitamins);
@@ -75,6 +97,10 @@ async function generateAndShowOptimalPlan() {
                     if (mealListDiv) {
                         mealListDiv.innerHTML = '✨ Your current nutrient balance is already perfect (difference ≤2) and calories are maxed out! No additional food needed.';
                     }
+                    cachedPlans = null;
+                    currentPlanIndex = -1;
+                    const planCounter = document.getElementById('planCounter');
+                    if (planCounter) planCounter.textContent = '';
                 } else {
                     alert('No suitable plan found with difference ≤2 points. Try enabling more foods or adjusting stats.');
                 }
@@ -82,7 +108,10 @@ async function generateAndShowOptimalPlan() {
                 calcBtn.disabled = false;
                 return;
             }
-            displayPlan(plans[0], current);
+            cachedPlans = plans;
+            currentPlanIndex = 0;
+            displayPlan(cachedPlans[0], current);
+            updatePlanCounter();
         } catch (err) {
             console.error(err);
             alert('An error occurred while generating the optimal plan.');
@@ -91,6 +120,15 @@ async function generateAndShowOptimalPlan() {
             calcBtn.disabled = false;
         }
     }, 10);
+}
+
+function updatePlanCounter() {
+    const counterSpan = document.getElementById('planCounter');
+    if (counterSpan && cachedPlans && cachedPlans.length > 0) {
+        counterSpan.textContent = `Plan ${currentPlanIndex + 1}/${cachedPlans.length}`;
+    } else if (counterSpan) {
+        counterSpan.textContent = '';
+    }
 }
 
 function generateRandomPlan() {
@@ -108,6 +146,11 @@ function generateRandomPlan() {
                 mealListDiv.innerHTML = '✨ Your current nutrient balance is already perfect (difference ≤2) and calories are maxed out! No additional food needed.';
             }
         }
+        // Random plan resets the optimal cache
+        cachedPlans = null;
+        currentPlanIndex = -1;
+        const counterSpan = document.getElementById('planCounter');
+        if (counterSpan) counterSpan.textContent = '';
     } else {
         alert('No foods available to generate a random plan.');
     }
@@ -131,6 +174,7 @@ function buildFoodUI() {
             toggleFood(food.name, e.target.checked);
             const toggleAll = document.getElementById('toggleAllFoods');
             if (toggleAll) toggleAll.checked = getAllFoods().every(f => isEnabled(f.name));
+            invalidateCache();
         };
         
         const statsSpan = document.createElement('span');
@@ -152,9 +196,34 @@ function initEventListeners() {
     // Slider event
     const slider = document.getElementById('maxDistinctSlider');
     if (slider) {
-        slider.addEventListener('input', updateSliderDisplay);
+        slider.addEventListener('input', () => {
+            updateSliderDisplay();
+            invalidateCache();
+        });
         updateSliderDisplay();
     }
+    
+    // All inputs that affect plan generation should invalidate cache
+    const cacheInvalidatingIds = ['carbs', 'protein', 'fat', 'vitamins', 'curCalories', 'maxCalories', 'ignoreCalorieLimit', 'tier', 'disableTierFilter', 'biomeFilter', 'disableBiomeFilter'];
+    cacheInvalidatingIds.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.addEventListener('change', () => {
+                invalidateCache();
+                const nutrients = getCurrentNutrients();
+                drawPie('beforeChart', nutrients.carbs, nutrients.protein, nutrients.fat, nutrients.vitamins);
+                updateTotalPoints();
+            });
+            if (el.type === 'number') {
+                el.addEventListener('input', () => {
+                    invalidateCache();
+                    const nutrients = getCurrentNutrients();
+                    drawPie('beforeChart', nutrients.carbs, nutrients.protein, nutrients.fat, nutrients.vitamins);
+                    updateTotalPoints();
+                });
+            }
+        }
+    });
     
     document.getElementById('toggleFoodPanelBtn').onclick = () => {
         const panel = document.getElementById('foodPanel');
@@ -174,29 +243,11 @@ function initEventListeners() {
         allFoods.forEach(f => { if (enabled) newSet.add(f.name); });
         setEnabledFoods(newSet);
         buildFoodUI();
+        invalidateCache();
     };
     document.getElementById('foodSearch').oninput = () => buildFoodUI();
     document.getElementById('calculateBtn').onclick = generateAndShowOptimalPlan;
     document.getElementById('randomizeBtn').onclick = generateRandomPlan;
-    
-    const inputs = ['carbs', 'protein', 'fat', 'vitamins', 'curCalories', 'maxCalories', 'ignoreCalorieLimit', 'tier', 'disableTierFilter', 'biomeFilter', 'disableBiomeFilter'];
-    inputs.forEach(id => {
-        const el = document.getElementById(id);
-        if (el) {
-            el.addEventListener('change', () => {
-                const nutrients = getCurrentNutrients();
-                drawPie('beforeChart', nutrients.carbs, nutrients.protein, nutrients.fat, nutrients.vitamins);
-                updateTotalPoints();
-            });
-            if (el.type === 'number') {
-                el.addEventListener('input', () => {
-                    const nutrients = getCurrentNutrients();
-                    drawPie('beforeChart', nutrients.carbs, nutrients.protein, nutrients.fat, nutrients.vitamins);
-                    updateTotalPoints();
-                });
-            }
-        }
-    });
     
     const nutrients = getCurrentNutrients();
     drawPie('beforeChart', nutrients.carbs, nutrients.protein, nutrients.fat, nutrients.vitamins);
