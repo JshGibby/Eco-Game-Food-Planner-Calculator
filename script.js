@@ -74,13 +74,13 @@ async function generateAndShowOptimalPlan() {
         return;
     }
     
-    // Otherwise generate new plans
+    // Otherwise generate new plans (up to 50)
     calcBtn.textContent = '⚡ Generating...';
     calcBtn.disabled = true;
     
     setTimeout(() => {
         try {
-            const plans = generateOptimalPlans(current, curCal, maxCal, ignoreLimit, maxDistinct, 20, 10000);
+            const plans = generateOptimalPlans(current, curCal, maxCal, ignoreLimit, maxDistinct, 50, 15000);
             if (plans.length === 0) {
                 const diff = Math.max(current.carbs, current.protein, current.fat, current.vitamins) -
                              Math.min(current.carbs, current.protein, current.fat, current.vitamins);
