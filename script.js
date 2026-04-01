@@ -39,6 +39,11 @@ function getMaxDistinct() {
     return slider ? parseInt(slider.value, 10) : 4;
 }
 
+function getMaxServingsPerFood() {
+    const slider = document.getElementById('maxServingsSlider');
+    return slider ? parseInt(slider.value, 10) : 3;
+}
+
 function getTolerance() {
     const slider = document.getElementById('toleranceSlider');
     return slider ? parseInt(slider.value, 10) : 2;
@@ -49,6 +54,11 @@ function updateSliderDisplay() {
     const maxDistinctValue = document.getElementById('maxDistinctValue');
     if (maxDistinctSlider && maxDistinctValue) {
         maxDistinctValue.textContent = maxDistinctSlider.value;
+    }
+    const maxServingsSlider = document.getElementById('maxServingsSlider');
+    const maxServingsValue = document.getElementById('maxServingsValue');
+    if (maxServingsSlider && maxServingsValue) {
+        maxServingsValue.textContent = maxServingsSlider.value;
     }
     const toleranceSlider = document.getElementById('toleranceSlider');
     const toleranceValue = document.getElementById('toleranceValue');
@@ -71,6 +81,7 @@ async function generateAndShowOptimalPlan() {
     const maxCal = getMaxCalories();
     const ignoreLimit = getIgnoreLimit();
     const maxDistinct = getMaxDistinct();
+    const maxServings = getMaxServingsPerFood();
     const tolerance = getTolerance();
     
     const calcBtn = document.getElementById('calculateBtn');
@@ -90,7 +101,7 @@ async function generateAndShowOptimalPlan() {
     
     setTimeout(() => {
         try {
-            const plans = generateOptimalPlans(current, curCal, maxCal, ignoreLimit, maxDistinct, tolerance, 50, 50000);
+            const plans = generateOptimalPlans(current, curCal, maxCal, ignoreLimit, maxDistinct, maxServings, tolerance, 50, 20000);
             if (plans.length === 0) {
                 const diff = Math.max(current.carbs, current.protein, current.fat, current.vitamins) -
                              Math.min(current.carbs, current.protein, current.fat, current.vitamins);
@@ -147,7 +158,8 @@ function generateRandomPlan() {
     const maxCal = getMaxCalories();
     const ignoreLimit = getIgnoreLimit();
     const maxDistinct = getMaxDistinct();
-    const plan = generateRandomPlanOnly(current, curCal, maxCal, ignoreLimit, maxDistinct);
+    const maxServings = getMaxServingsPerFood();
+    const plan = generateRandomPlanOnly(current, curCal, maxCal, ignoreLimit, maxDistinct, maxServings);
     if (plan) {
         displayPlan(plan, current);
         if (plan.meals.length === 0) {
@@ -207,6 +219,13 @@ function initEventListeners() {
     const maxDistinctSlider = document.getElementById('maxDistinctSlider');
     if (maxDistinctSlider) {
         maxDistinctSlider.addEventListener('input', () => {
+            updateSliderDisplay();
+            invalidateCache();
+        });
+    }
+    const maxServingsSlider = document.getElementById('maxServingsSlider');
+    if (maxServingsSlider) {
+        maxServingsSlider.addEventListener('input', () => {
             updateSliderDisplay();
             invalidateCache();
         });
