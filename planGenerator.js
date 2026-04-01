@@ -61,8 +61,8 @@ function evaluatePlan(plan, currentNutrients) {
     return { totals, diff, caloriesUsed: totals.calories };
 }
 
-export function generateOptimalPlans(currentNutrients, currentCalories, maxCalories, ignoreLimit, maxDistinct = 4, numPlans = 20, iterations = 8000) {
-    // If current state is already balanced (within 2 points) and calories are maxed (or ignore limit)
+export function generateOptimalPlans(currentNutrients, currentCalories, maxCalories, ignoreLimit, maxDistinct = 4, numPlans = 50, iterations = 20000) {
+    // If current state is already perfect and calories are maxed, return empty
     const balanced = isBalanced(currentNutrients);
     const caloriesAtCap = ignoreLimit || currentCalories >= maxCalories - 10;
     if (balanced && caloriesAtCap) {
@@ -79,26 +79,28 @@ export function generateOptimalPlans(currentNutrients, currentCalories, maxCalor
         if (plan.length === 0) continue;
         const { totals, diff, caloriesUsed } = evaluatePlan(plan, currentNutrients);
         if (isNaN(totals.carbs) || isNaN(totals.protein) || isNaN(totals.fat) || isNaN(totals.vitamins)) continue;
-        candidatePlans.push({
-            meals: plan,
-            final: { carbs: totals.carbs, protein: totals.protein, fat: totals.fat, vitamins: totals.vitamins },
-            caloriesUsed,
-            diff
-        });
+        // Only keep plans that achieve perfect balance (diff <= 2)
+        if (diff <= 2) {
+            candidatePlans.push({
+                meals: plan,
+                final: { carbs: totals.carbs, protein: totals.protein, fat: totals.fat, vitamins: totals.vitamins },
+                caloriesUsed,
+                diff
+            });
+        }
     }
     
+    // Remove duplicates based on meal composition
     const unique = new Map();
     for (const plan of candidatePlans) {
         const key = plan.meals.map(m => `${m.food.name}x${m.servings}`).sort().join('|');
-        if (!unique.has(key) || unique.get(key).diff > plan.diff) {
+        if (!unique.has(key) || unique.get(key).caloriesUsed < plan.caloriesUsed) {
             unique.set(key, plan);
         }
     }
     
-    const sorted = Array.from(unique.values()).sort((a, b) => {
-        if (Math.abs(a.diff - b.diff) < 0.1) return b.caloriesUsed - a.caloriesUsed;
-        return a.diff - b.diff;
-    });
+    // Sort by calories used descending (higher = better) to maximize calorie filling
+    const sorted = Array.from(unique.values()).sort((a, b) => b.caloriesUsed - a.caloriesUsed);
     
     return sorted.slice(0, numPlans);
 }
