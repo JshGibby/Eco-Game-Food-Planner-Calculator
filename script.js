@@ -67,20 +67,19 @@ async function generateAndShowOptimalPlan() {
     
     // If we have cached plans and index is within range, just cycle
     if (cachedPlans && cachedPlans.length > 0 && currentPlanIndex >= 0) {
-        // Move to next plan (wrap around)
         currentPlanIndex = (currentPlanIndex + 1) % cachedPlans.length;
         displayPlan(cachedPlans[currentPlanIndex], current);
         updatePlanCounter();
         return;
     }
     
-    // Otherwise generate new plans (up to 50)
+    // Otherwise generate new perfect plans
     calcBtn.textContent = '⚡ Generating...';
     calcBtn.disabled = true;
     
     setTimeout(() => {
         try {
-            const plans = generateOptimalPlans(current, curCal, maxCal, ignoreLimit, maxDistinct, 50, 15000);
+            const plans = generateOptimalPlans(current, curCal, maxCal, ignoreLimit, maxDistinct, 50, 20000);
             if (plans.length === 0) {
                 const diff = Math.max(current.carbs, current.protein, current.fat, current.vitamins) -
                              Math.min(current.carbs, current.protein, current.fat, current.vitamins);
@@ -102,7 +101,7 @@ async function generateAndShowOptimalPlan() {
                     const planCounter = document.getElementById('planCounter');
                     if (planCounter) planCounter.textContent = '';
                 } else {
-                    alert('No suitable plan found with difference ≤2 points. Try enabling more foods or adjusting stats.');
+                    alert('❌ No perfect meal plan found with nutrient difference ≤2 points.\nTry enabling more foods, increasing max distinct items, or adjusting your current stats.');
                 }
                 calcBtn.textContent = originalText;
                 calcBtn.disabled = false;
