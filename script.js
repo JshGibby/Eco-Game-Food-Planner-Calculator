@@ -39,11 +39,21 @@ function getMaxDistinct() {
     return slider ? parseInt(slider.value, 10) : 4;
 }
 
+function getTolerance() {
+    const slider = document.getElementById('toleranceSlider');
+    return slider ? parseInt(slider.value, 10) : 2;
+}
+
 function updateSliderDisplay() {
-    const slider = document.getElementById('maxDistinctSlider');
-    const display = document.getElementById('maxDistinctValue');
-    if (slider && display) {
-        display.textContent = slider.value;
+    const maxDistinctSlider = document.getElementById('maxDistinctSlider');
+    const maxDistinctValue = document.getElementById('maxDistinctValue');
+    if (maxDistinctSlider && maxDistinctValue) {
+        maxDistinctValue.textContent = maxDistinctSlider.value;
+    }
+    const toleranceSlider = document.getElementById('toleranceSlider');
+    const toleranceValue = document.getElementById('toleranceValue');
+    if (toleranceSlider && toleranceValue) {
+        toleranceValue.textContent = `≤${toleranceSlider.value}`;
     }
 }
 
@@ -61,6 +71,7 @@ async function generateAndShowOptimalPlan() {
     const maxCal = getMaxCalories();
     const ignoreLimit = getIgnoreLimit();
     const maxDistinct = getMaxDistinct();
+    const tolerance = getTolerance();
     
     const calcBtn = document.getElementById('calculateBtn');
     const originalText = calcBtn.textContent;
@@ -79,12 +90,12 @@ async function generateAndShowOptimalPlan() {
     
     setTimeout(() => {
         try {
-            const plans = generateOptimalPlans(current, curCal, maxCal, ignoreLimit, maxDistinct, 50, 20000);
+            const plans = generateOptimalPlans(current, curCal, maxCal, ignoreLimit, maxDistinct, tolerance, 50, 20000);
             if (plans.length === 0) {
                 const diff = Math.max(current.carbs, current.protein, current.fat, current.vitamins) -
                              Math.min(current.carbs, current.protein, current.fat, current.vitamins);
                 const caloriesAtCap = ignoreLimit || curCal >= maxCal - 10;
-                if (diff <= 2 && caloriesAtCap) {
+                if (diff <= tolerance && caloriesAtCap) {
                     const emptyPlan = {
                         meals: [],
                         final: { ...current },
@@ -94,14 +105,14 @@ async function generateAndShowOptimalPlan() {
                     displayPlan(emptyPlan, current);
                     const mealListDiv = document.getElementById('mealList');
                     if (mealListDiv) {
-                        mealListDiv.innerHTML = '✨ Your current nutrient balance is already perfect (difference ≤2) and calories are maxed out! No additional food needed.';
+                        mealListDiv.innerHTML = `✨ Your current nutrient balance is already within ${tolerance} points and calories are maxed out! No additional food needed.`;
                     }
                     cachedPlans = null;
                     currentPlanIndex = -1;
                     const planCounter = document.getElementById('planCounter');
                     if (planCounter) planCounter.textContent = '';
                 } else {
-                    alert('❌ No perfect meal plan found with nutrient difference ≤2 points.\nTry enabling more foods, increasing max distinct items, or adjusting your current stats.');
+                    alert(`❌ No meal plan found with nutrient difference ≤ ${tolerance} points.\nTry enabling more foods, increasing max distinct items, or adjusting your current stats.`);
                 }
                 calcBtn.textContent = originalText;
                 calcBtn.disabled = false;
@@ -124,7 +135,7 @@ async function generateAndShowOptimalPlan() {
 function updatePlanCounter() {
     const counterSpan = document.getElementById('planCounter');
     if (counterSpan && cachedPlans && cachedPlans.length > 0) {
-        counterSpan.textContent = `Plan ${currentPlanIndex + 1}/${cachedPlans.length}`;
+        counterSpan.textContent = `Plan ${currentPlanIndex + 1}/${cachedPlans.length} (diff ≤${getTolerance()})`;
     } else if (counterSpan) {
         counterSpan.textContent = '';
     }
@@ -142,7 +153,7 @@ function generateRandomPlan() {
         if (plan.meals.length === 0) {
             const mealListDiv = document.getElementById('mealList');
             if (mealListDiv) {
-                mealListDiv.innerHTML = '✨ Your current nutrient balance is already perfect (difference ≤2) and calories are maxed out! No additional food needed.';
+                mealListDiv.innerHTML = `✨ Your current nutrient balance is already within 2 points and calories are maxed out! No additional food needed.`;
             }
         }
         // Random plan resets the optimal cache
@@ -192,15 +203,22 @@ function buildFoodUI() {
 }
 
 function initEventListeners() {
-    // Slider event
-    const slider = document.getElementById('maxDistinctSlider');
-    if (slider) {
-        slider.addEventListener('input', () => {
+    // Slider events
+    const maxDistinctSlider = document.getElementById('maxDistinctSlider');
+    if (maxDistinctSlider) {
+        maxDistinctSlider.addEventListener('input', () => {
             updateSliderDisplay();
             invalidateCache();
         });
-        updateSliderDisplay();
     }
+    const toleranceSlider = document.getElementById('toleranceSlider');
+    if (toleranceSlider) {
+        toleranceSlider.addEventListener('input', () => {
+            updateSliderDisplay();
+            invalidateCache();
+        });
+    }
+    updateSliderDisplay();
     
     // All inputs that affect plan generation should invalidate cache
     const cacheInvalidatingIds = ['carbs', 'protein', 'fat', 'vitamins', 'curCalories', 'maxCalories', 'ignoreCalorieLimit', 'tier', 'disableTierFilter', 'biomeFilter', 'disableBiomeFilter'];
